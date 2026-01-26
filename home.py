@@ -28,6 +28,7 @@ st.markdown("""
 - 🗃️ **Bancos de Dados:** Consultas rápidas aos principais bancos de dados.
 - ♿ **Solicitações de Acessibilidade:** Acompanhamento e gestão das demandas relacionadas à acessibilidade.
 - 💡 **Projetos Elétricos:** Consulta, acompanhamento de status e informações dos projetos elétricos em execução.
+- 🏫 **Pague Predial:** Consulta e acompanhamento dos pedidos de manutenção escolar.
 """)
 
 st.caption("Utilize o menu de navegação na parte superior para acessar a ferramenta desejada.")
