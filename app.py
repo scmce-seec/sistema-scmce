@@ -17,7 +17,8 @@ pages = {
         st.Page("bd-medicoes.py", title="Banco de Dados - Medições", icon=":material/money:"),
         st.Page("bd-empenhos.py", title="Banco de Dados - Empenhos", icon=":material/paid:"),
         st.Page("soli_acessibilidade.py", title="Solicitações de Acessibilidade", icon=":material/balance:"),
-        st.Page("proj_eletrico.py", title="Projetos Elétricos", icon=":material/electric_bolt:")
+        st.Page("proj_eletrico.py", title="Projetos Elétricos", icon=":material/electric_bolt:"),
+        st.Page("bd-pague.py", title="Pague Predial", icon=":material/build:")
     ],
 }
 
