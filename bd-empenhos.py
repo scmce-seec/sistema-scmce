@@ -178,7 +178,7 @@ with tab1:
         st.dataframe(df_display.style.apply(colorir_linhas, axis=1), hide_index=True, use_container_width=True)
 
 # ==============================================================================
-# ABA 2: MITO (COM DADOS ORIGINAIS)
+# ABA 2: ANÁLISE AVANÇADA (CORRIGIDA)
 # ==============================================================================
 with tab2:
     st.header("Análise - Fonte por Empresa")
@@ -186,36 +186,59 @@ with tab2:
     msg = '''OBS: **com OB** são medições com ordem bancária. Já **Ano Fiscal** são medições **com OB** e **sem OB**.'''
     st.markdown(msg)
 
-    # Carregamento de dados específicos desta aba
+    # 1. Carregamento de dados específicos desta aba
     aba_analise = st.secrets["aba_analise"]
     aba_saldo = st.secrets["aba_saldo"]
 
     data_analise = carregar_df(planilha, aba_analise)
     data_saldo = carregar_df(planilha, aba_saldo)
 
+    # 2. TRATAMENTO DE DADOS (CRUCIAL PARA O FILTRO FUNCIONAR)
+    # Convertemos a coluna 'ANO' das DUAS tabelas para número inteiro.
+    # Isso evita erros se numa planilha estiver "2026" (texto) e na outra 2026 (número).
+    for df in [data_analise, data_saldo]:
+        if "ANO" in df.columns:
+            # Converte para numérico, erros viram NaN, depois preenche com 0 e vira Inteiro
+            df["ANO"] = pd.to_numeric(df["ANO"], errors='coerce').fillna(0).astype(int)
+
     # --- ÁREA DE FILTROS ---
     with st.expander("🔍 Filtros da Visualização", expanded=True):
         
-        # Cria cópias locais
+        # Cria cópias locais para não alterar o original
         df_filtrado_analise = data_analise.copy()
         df_filtrado_saldo = data_saldo.copy()
         
-        # Filtro de Ano
-        anos_disponiveis = sorted(data_analise["ANO"].unique().tolist())
-        idx_padrao = anos_disponiveis.index(anos_disponiveis[-1]) if anos_disponiveis else 0
+        # 3. CRIAÇÃO INTELIGENTE DA LISTA DE ANOS
+        # Pegamos os anos únicos da tabela de Análise E da tabela de Saldo
+        anos1 = data_analise["ANO"].unique().tolist() if "ANO" in data_analise.columns else []
+        anos2 = data_saldo["ANO"].unique().tolist() if "ANO" in data_saldo.columns else []
         
-        # --- CORREÇÃO AQUI: Adicionei key="ano_analise" ---
+        # Juntamos as duas listas, usamos set() para remover duplicados e sorted() para ordenar
+        # reverse=True garante que 2026 apareça antes de 2025
+        todos_anos = sorted(list(set(anos1 + anos2)), reverse=True)
+        
+        # Removemos o 0 (caso tenha havido erro de conversão ou linha vazia)
+        todos_anos = [ano for ano in todos_anos if ano != 0]
+
+        # Define o padrão como o primeiro da lista (o mais recente)
+        idx_padrao = 0 if todos_anos else None
+        
         sel_ano = st.selectbox(
             "Ano:", 
-            options=anos_disponiveis, 
+            options=todos_anos, 
             index=idx_padrao, 
-            key="ano_analise" # <--- O SEGREDO ESTÁ AQUI
+            key="ano_analise_combinado" 
         )
 
     # --- APLICAÇÃO DOS FILTROS ---
     if sel_ano:
-        df_filtrado_analise = df_filtrado_analise[df_filtrado_analise["ANO"] == sel_ano]
-        df_filtrado_saldo = df_filtrado_saldo[df_filtrado_saldo["ANO"] == sel_ano]
+        # Filtra a tabela 1
+        if "ANO" in df_filtrado_analise.columns:
+            df_filtrado_analise = df_filtrado_analise[df_filtrado_analise["ANO"] == sel_ano]
+        
+        # Filtra a tabela 2
+        if "ANO" in df_filtrado_saldo.columns:
+            df_filtrado_saldo = df_filtrado_saldo[df_filtrado_saldo["ANO"] == sel_ano]
 
     # --- TABELA 1: FONTE POR EMPRESA ---
     st.write("") 

@@ -26,11 +26,9 @@ def limpar_moeda(valor):
 if "VALOR" in data.columns:
     data["VALOR"] = data["VALOR"].apply(limpar_moeda)
 
-# 2. Limpeza de Data (Essencial para o gráfico de linha)
-# Converte texto (ex: "25/03/2024") para data que o Python entende
+# 2. Limpeza de Data
 if "DATA CADASTRO" in data.columns:
     data["DATA CADASTRO"] = pd.to_datetime(data["DATA CADASTRO"], dayfirst=True, errors='coerce')
-    # Remove horas se houver, deixando só a data (YYYY-MM-DD)
     data["DATA CADASTRO"] = data["DATA CADASTRO"].dt.date
 
 # Cria cópia para filtrar
@@ -50,17 +48,23 @@ if sel_programa != "Todos":
 
 st.sidebar.markdown("---")
 
-# 2. Filtros de Localização e Escola
+# 2. Filtros de Localização e Escola (COM A LÓGICA ANINHADA)
 busca_escola = st.sidebar.text_input("Buscar Escola (Nome):")
 
+# Primeiro escolhemos a DIREC
 direc_opcoes = sorted(data["DIREC"].unique().tolist())
 sel_direc = st.sidebar.multiselect("Selecione a DIREC:", options=direc_opcoes, placeholder="Todas") 
 
+# --- AQUI ESTÁ A MUDANÇA (FILTRO EM CASCATA) ---
 if sel_direc:
-    municipios_disponiveis = df_filtrado[df_filtrado['DIREC'].isin(sel_direc)]["MUNICÍPIO"].unique().tolist()
+    # Se tiver DIREC selecionada, mostramos apenas os municípios daquela DIREC
+    # Filtramos o dataframe original 'data' para pegar os municípios corretos
+    municipios_disponiveis = data[data['DIREC'].isin(sel_direc)]["MUNICÍPIO"].unique().tolist()
 else:
+    # Se não tiver DIREC selecionada, mostra todos os municípios
     municipios_disponiveis = data["MUNICÍPIO"].unique().tolist()
 
+# Monta a lista e cria o selectbox
 municipios_opcoes = ["Todos"] + sorted(municipios_disponiveis)
 sel_municipio = st.sidebar.selectbox("Selecione o município:", options=municipios_opcoes)
 
@@ -80,12 +84,9 @@ if sel_ano:
 
 
 # --- 1. BLOCO DE MÉTRICAS E GRÁFICOS ---
-# Definição de cores (RGB String para o Plotly)
 C_BLUE  = 'rgb(150, 173, 231)'
 C_GREEN = 'rgb(172, 231, 150)'
 C_RED   = 'rgb(231, 150, 166)'
-
-# Cores em Tupla para o my_metric (se sua função usa tupla)
 t_red = (231, 150, 166)
 t_green = (172, 231, 150)
 
@@ -103,32 +104,28 @@ with col2:
     valor_faturado = df_filtrado["VALOR"].sum()
     my_metric("Valor Faturado", formatar_moeda_visual(valor_faturado), t_green, "fas fa-file-invoice-dollar")
 
-# Linha 2: Gráficos (AQUI ESTÃO OS GRÁFICOS NOVOS)
+# Linha 2: Gráficos
 if not df_filtrado.empty:
     col3, col4 = st.columns(2)
     
     with col3:
-        # GRÁFICO DE LINHA: Evolução Temporal (Por Data de Cadastro)
-        # Conta quantas linhas existem por data
+        # GRÁFICO DE LINHA
         df_line = df_filtrado["DATA CADASTRO"].value_counts().sort_index().reset_index()
         df_line.columns = ["Data", "Quantidade"]
         
         fig_line = px.line(
             df_line, x="Data", y="Quantidade",
             title="Evolução de Medições (Dia a Dia)",
-            markers=True, # Adiciona bolinhas nos pontos
-            color_discrete_sequence=[C_BLUE] # Usa o Azul da sua paleta
+            markers=True,
+            color_discrete_sequence=[C_BLUE]
         )
         fig_line.update_layout(yaxis_title=None, xaxis_title=None)
         st.plotly_chart(fig_line, use_container_width=True)
 
     with col4:
-        # GRÁFICO DE BARRAS: Valor por Fonte
+        # GRÁFICO DE BARRAS
         df_fonte = df_filtrado.groupby("FONTE")["VALOR"].sum().reset_index()
         df_fonte = df_fonte.sort_values("VALOR", ascending=True) 
-
-        # --- CORREÇÃO DO CORTE DE TEXTO ---
-        # Descobre o valor máximo para ajustar a régua do gráfico
         max_valor = df_fonte["VALOR"].max()
 
         fig_bar = px.bar(
@@ -138,21 +135,12 @@ if not df_filtrado.empty:
             text_auto='.2s',
             color_discrete_sequence=[C_GREEN] 
         )
-        
         fig_bar.update_traces(
-            textfont_color='black',
-            textposition='outside', 
-            texttemplate='R$ %{x:.2s}',
-            hovertemplate='<b>Fonte:</b> %{y}<br><b>Valor:</b> R$ %{x:,.2f}<extra></extra>',
-            cliponaxis=False # Ajuda a não cortar se passar um pouquinho
+            textfont_color='black', textposition='outside', texttemplate='R$ %{x:.2s}',
+            hovertemplate='<b>Fonte:</b> %{y}<br><b>Valor:</b> R$ %{x:,.2f}<extra></extra>', cliponaxis=False
         )
-        
         fig_bar.update_layout(
-            yaxis_title=None, 
-            xaxis_title=None,
-            separators=",.",
-            # AQUI ESTÁ O PULO DO GATO:
-            # Aumentamos o limite do eixo X em 20% (multiplicando por 1.2) para caber o texto
+            yaxis_title=None, xaxis_title=None, separators=",.",
             xaxis_range=[0, max_valor * 1.2] 
         )
         st.plotly_chart(fig_bar, use_container_width=True)
@@ -161,7 +149,7 @@ else:
     st.warning("Nenhum dado encontrado para gerar os gráficos.")
 
 
-# --- 2. TABELA DE DADOS (FUNDO) ---
+# --- 2. TABELA DE DADOS ---
 st.write("")
 st.subheader("Detalhamento das Medições")
 
@@ -171,11 +159,8 @@ with st.expander("Visualizar Tabela Completa", expanded=True):
                'DATA ORDEM BANCARIA', 'COMENTÁRIOS', 'ANO FISCAL']
 
     cols_to_show = [c for c in colunas if c in df_filtrado.columns]
-    
-    # Cópia para visualização
     df_display = df_filtrado[cols_to_show].copy()
 
-    # Formatação visual do dinheiro
     if "VALOR" in df_display.columns:
         df_display["VALOR"] = df_display["VALOR"].apply(formatar_moeda_visual)
 

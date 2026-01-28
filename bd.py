@@ -66,8 +66,16 @@ with tab1:
             sel_direc = st.multiselect("DIREC:", options=direc_opcoes, placeholder="Todas")
             
         with col_f4:
-             # Filtro de Município
-            municipios_opcoes = ["Todos"] + sorted(data["MUNICÍPIO"].unique().tolist())
+             # --- LÓGICA DE FILTRO ANINHADO (CASCATA) ---
+             # Se houver DIREC selecionada, filtra os municípios. 
+             # Se não, mostra todos.
+            if sel_direc:
+                # Filtra o dataframe original apenas para pegar os municípios das DIRECs selecionadas
+                mun_disponiveis = data[data["DIREC"].isin(sel_direc)]["MUNICÍPIO"].unique().tolist()
+            else:
+                mun_disponiveis = data["MUNICÍPIO"].unique().tolist()
+
+            municipios_opcoes = ["Todos"] + sorted(mun_disponiveis)
             sel_municipio = st.selectbox("Município:", options=municipios_opcoes)
 
         with col_f5:
@@ -259,7 +267,3 @@ with tab2:
     # --- EXIBIÇÃO NO MITO ---
     # Agora passamos o dataframe 'data_analise' totalmente limpo e formatado
     dfs, code = spreadsheet(data_analise)
-
-    # Opcional: Mostrar o código gerado pelo usuário (útil para debug ou aprendizado)
-    # with st.expander("Ver código Python gerado"):
-    #     st.code(code)
