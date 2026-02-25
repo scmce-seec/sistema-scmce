@@ -31,6 +31,17 @@ if "DATA CADASTRO" in data.columns:
     data["DATA CADASTRO"] = pd.to_datetime(data["DATA CADASTRO"], dayfirst=True, errors='coerce')
     data["DATA CADASTRO"] = data["DATA CADASTRO"].dt.date
 
+# 3. Limpeza do Ano Fiscal (AGORA COMO TEXTO)
+if "ANO FISCAL" in data.columns:
+    # Garante que qualquer vazio residual vire "-"
+    data["ANO FISCAL"] = data["ANO FISCAL"].fillna("-")
+    # Converte tudo para texto
+    data["ANO FISCAL"] = data["ANO FISCAL"].astype(str)
+    # Remove o ".0" de anos que o pandas possa ter lido como "2024.0"
+    data["ANO FISCAL"] = data["ANO FISCAL"].str.replace(".0", "", regex=False)
+    # Caso sobre algum "nan" ou "0" como texto, força a virar "-"
+    data["ANO FISCAL"] = data["ANO FISCAL"].replace(["nan", "0", "<NA>"], "-")
+
 # Cria cópia para filtrar
 df_filtrado = data.copy()
 
@@ -55,10 +66,9 @@ busca_escola = st.sidebar.text_input("Buscar Escola (Nome):")
 direc_opcoes = sorted(data["DIREC"].unique().tolist())
 sel_direc = st.sidebar.multiselect("Selecione a DIREC:", options=direc_opcoes, placeholder="Todas") 
 
-# --- AQUI ESTÁ A MUDANÇA (FILTRO EM CASCATA) ---
+# Filtro em cascata para Municípios
 if sel_direc:
     # Se tiver DIREC selecionada, mostramos apenas os municípios daquela DIREC
-    # Filtramos o dataframe original 'data' para pegar os municípios corretos
     municipios_disponiveis = data[data['DIREC'].isin(sel_direc)]["MUNICÍPIO"].unique().tolist()
 else:
     # Se não tiver DIREC selecionada, mostra todos os municípios
@@ -68,7 +78,7 @@ else:
 municipios_opcoes = ["Todos"] + sorted(municipios_disponiveis)
 sel_municipio = st.sidebar.selectbox("Selecione o município:", options=municipios_opcoes)
 
-# 3. Filtro de Ano
+# --- 3. Filtro de Ano (SIMPLIFICADO) ---
 ano_opcoes = sorted(data["ANO FISCAL"].unique().tolist())
 sel_ano = st.sidebar.multiselect("Selecione o ano:", options=ano_opcoes, placeholder="Todos")
 
@@ -79,6 +89,8 @@ if sel_direc:
     df_filtrado = df_filtrado[df_filtrado["DIREC"].isin(sel_direc)]
 if sel_municipio != "Todos":
     df_filtrado = df_filtrado[df_filtrado["MUNICÍPIO"] == sel_municipio]
+    
+# Aplicação do filtro de Ano simplificada
 if sel_ano:
     df_filtrado = df_filtrado[df_filtrado["ANO FISCAL"].isin(sel_ano)]
 
