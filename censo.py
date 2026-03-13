@@ -6,7 +6,7 @@ from utils import carregar_df
 
 # Configuração da página
 st.set_page_config(page_title="Censo", layout="wide")
-st.title("📊 Censo")
+st.title("📊 Censo 2025")
 
 # --- CARREGAMENTO DE DADOS ---
 planilha = st.secrets["planilha"]
